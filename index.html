@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🍎 Fruta Rush</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="rush-banner" hidden>🕐 ¡HORA PUNTA! Los clientes llegan x3 — <span id="rush-timer">30</span>s</div>
+
+  <header>
+    <div class="awning"></div>
+    <div class="header-row">
+      <div class="pill coin-pill">🪙 <span id="money">0</span></div>
+      <h1>🍎 FRUTA RUSH 🍌</h1>
+      <div class="pill day-pill">
+        ☀️ Día <span id="day">1</span>
+        <div class="day-bar"><div id="day-fill"></div></div>
+        <span id="day-progress">0/10</span>
+      </div>
+    </div>
+    <div id="streak" class="streak" hidden>🔥 Racha x<span id="streak-n">0</span></div>
+    <div id="fidelity" class="fidelity" hidden>⭐ Fidelidad: <span id="fidelity-n">0</span> <small>(+<span id="fidelity-pct">0</span>% ventas)</small></div>
+  </header>
+
+  <main>
+    <!-- Escena principal -->
+    <section class="scene">
+      <div class="baskets-wrap">
+        <h2>Cestos</h2>
+        <div class="baskets" id="baskets"></div>
+      </div>
+
+      <div class="bag-zone">
+        <div id="bag" class="bag" title="Click para vaciar la bolsa">🛍️</div>
+        <div id="bag-contents" class="bag-contents">vacía</div>
+        <div id="bag-count" class="bag-count">0/4</div>
+        <p class="hint">Click en los cestos para llenar la bolsa.<br>Click en 🛍️ para vaciarla.</p>
+      </div>
+
+      <div class="customers-wrap">
+        <h2>Cola de clientes</h2>
+        <div class="customers" id="customers"></div>
+      </div>
+    </section>
+
+    <!-- Barra de compras -->
+    <section class="shop-bar" id="shop-bar"></section>
+
+    <!-- Personal y logros -->
+    <section class="bottom-grid">
+      <div>
+        <h2>👥 Personal</h2>
+        <div id="helpers"></div>
+      </div>
+      <div>
+        <h2>🏆 Logros</h2>
+        <div id="achievements"></div>
+      </div>
+    </section>
+
+    <!-- Guardado / carga / opciones -->
+    <div class="save-bar">
+      <button id="export" class="save-btn">💾 Guardar en archivo</button>
+      <button id="import" class="save-btn">📂 Cargar desde archivo</button>
+      <input type="file" id="load-file" accept=".json,application/json" hidden>
+      <button id="mute" class="save-btn" title="Sonido">🔊</button>
+      <button id="reset" class="reset">Reiniciar partida</button>
+    </div>
+  </main>
+
+  <div id="floaters"></div>
+  <div id="toasts"></div>
+
+  <script src="game.js"></script>
+</body>
+</html>
