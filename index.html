@@ -7,7 +7,15 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="rush-banner" hidden>🕐 ¡HORA PUNTA! Los clientes llegan x3 — <span id="rush-timer">30</span>s</div>
+  <div id="rush-banner" hidden>🕐 ¡HORA PUNTA! Clientes x3 — <span id="rush-timer">30</span>s</div>
+  <div id="event-banner" hidden>
+    <div class="event-banner-main">
+      <span id="event-text"></span>
+      <span class="event-timer-text">— <span id="event-timer">0</span>s</span>
+      <button id="event-info-btn" class="event-info-btn" title="Ver descripción">️</button>
+    </div>
+    <div id="event-desc" class="event-desc" hidden></div>
+  </div>
 
   <header>
     <div class="awning"></div>
@@ -17,7 +25,7 @@
       <div class="pill day-pill">
         ☀️ Día <span id="day">1</span>
         <div class="day-bar"><div id="day-fill"></div></div>
-        <span id="day-progress">0/10</span>
+        <span id="day-progress">0/25</span>
       </div>
     </div>
     <div id="streak" class="streak" hidden>🔥 Racha x<span id="streak-n">0</span></div>
@@ -36,7 +44,7 @@
         <div id="bag" class="bag" title="Click para vaciar la bolsa">🛍️</div>
         <div id="bag-contents" class="bag-contents">vacía</div>
         <div id="bag-count" class="bag-count">0/4</div>
-        <p class="hint">Click en los cestos para llenar la bolsa.<br>Click en 🛍️ para vaciarla.</p>
+        <p class="hint">Click en cestos para llenar<br>Click en 🛍️ para vaciar</p>
       </div>
 
       <div class="customers-wrap">
@@ -48,30 +56,120 @@
     <!-- Barra de compras -->
     <section class="shop-bar" id="shop-bar"></section>
 
-    <!-- Personal y logros -->
+    <!-- Personal, estadísticas y logros -->
     <section class="bottom-grid">
       <div>
         <h2>👥 Personal</h2>
         <div id="helpers"></div>
       </div>
       <div>
-        <h2>🏆 Logros</h2>
-        <div id="achievements"></div>
+        <h2 class="collapsible" data-target="stats">📊 Estadísticas <span class="arrow">▼</span></h2>
+        <div id="stats" class="collapsible-body"></div>
+      </div>
+      <div class="full-width">
+        <h2 class="collapsible" data-target="achievements">🏆 Logros <span class="arrow">▼</span></h2>
+        <div id="achievements" class="collapsible-body"></div>
       </div>
     </section>
 
     <!-- Guardado / carga / opciones -->
     <div class="save-bar">
-      <button id="export" class="save-btn">💾 Guardar en archivo</button>
-      <button id="import" class="save-btn">📂 Cargar desde archivo</button>
+      <button id="export" class="save-btn">💾 Guardar</button>
+      <button id="import" class="save-btn">📂 Cargar</button>
       <input type="file" id="load-file" accept=".json,application/json" hidden>
       <button id="mute" class="save-btn" title="Sonido">🔊</button>
-      <button id="reset" class="reset">Reiniciar partida</button>
+      <button id="reset" class="reset">Reiniciar</button>
     </div>
   </main>
 
+  <!-- Modal de ayuda -->
+  <div id="help-modal" class="modal" hidden>
+    <div class="modal-content">
+      <button id="help-close" class="modal-close">✕</button>
+      <h2>🍎 Cómo jugar a Fruta Rush</h2>
+
+      <div class="help-section">
+        <h3>🎯 Objetivo</h3>
+        <p>Atiende a los clientes sirviendo sus pedidos correctamente. Gana monedas para mejorar tu frutería y desbloquear nuevas frutas, personal y máquinas.</p>
+      </div>
+
+      <div class="help-section">
+        <h3>🛍️ Mecánica principal</h3>
+        <ol>
+          <li><strong>Llena tu bolsa:</strong> Haz click en los cestos de fruta para añadir frutas a tu bolsa.</li>
+          <li><strong>Entrega el pedido:</strong> Cuando la bolsa contenga exactamente lo que pide un cliente, haz click en él para entregar.</li>
+          <li><strong>Vacía la bolsa:</strong> Si te equivocas, haz click en la bolsa 🛍️ para vaciarla y empezar de nuevo.</li>
+        </ol>
+      </div>
+
+      <div class="help-section">
+        <h3>👥 Clientes</h3>
+        <ul>
+          <li>Cada cliente tiene un pedido (frutas con cantidades) y una barra de paciencia.</li>
+          <li>Si se acaba su paciencia, se marcha enfadado y pierdes la racha.</li>
+          <li>Los clientes <span class="vip-text">⭐ VIP</span> pagan x5 pero tienen la mitad de paciencia.</li>
+          <li>Las colas pueden tener varios clientes esperando. El primero es el que se atiende.</li>
+        </ul>
+      </div>
+
+      <div class="help-section">
+        <h3>🥤 Máquinas especiales</h3>
+        <ul>
+          <li><strong>Licuadora:</strong> Desbloquea zumos (3 de una fruta, paga x3) y macedonias (3 frutas distintas, paga x2.5).</li>
+          <li><strong>Horno:</strong> Desbloquea pasteles (4 de una fruta, paga x4).</li>
+          <li><strong>Exprimidor:</strong> Desbloquea zumos dobles (5 de una fruta, paga x5).</li>
+        </ul>
+        <p>Los pedidos especiales aparecen automáticamente cuando tienes la máquina.</p>
+      </div>
+
+      <div class="help-section">
+        <h3>👨‍💼 Personal</h3>
+        <ul>
+          <li>Contrata personal para que atienda clientes automáticamente.</li>
+          <li>Cada empleado atiende a UN cliente a la vez.</li>
+          <li>Tipos avanzados se desbloquean contratando suficientes del anterior.</li>
+          <li>El <strong>Experto</strong> es muy rápido pero a veces se equivoca (-10% valor).</li>
+        </ul>
+      </div>
+
+      <div class="help-section">
+        <h3>🛒 Mejoras</h3>
+        <ul>
+          <li><strong>Carretilla:</strong> +2 capacidad de bolsa, +10% ventas, pedidos más grandes.</li>
+          <li><strong>Colas:</strong> Hasta 8 colas para atender más clientes a la vez.</li>
+          <li><strong>Decoración:</strong> +10% paciencia y +5% llegada de clientes por nivel.</li>
+          <li><strong>Franquicia:</strong> Reinicia la tienda pero ganas puntos de fidelidad permanentes.</li>
+        </ul>
+      </div>
+
+      <div class="help-section">
+        <h3>🎲 Eventos aleatorios</h3>
+        <ul>
+          <li><strong>🎪 Día de Mercado:</strong> Precios x2 durante 60s.</li>
+          <li><strong>💰 Propina:</strong> Bonus inmediato de 500 🪙.</li>
+          <li><strong>⭐ Buena Reseña:</strong> +20% paciencia durante 90s.</li>
+          <li><strong>📋 Inspección:</strong> -30% velocidad del personal durante 45s.</li>
+          <li><strong>🌧️ Día Lluvioso:</strong> -50% clientes durante 60s.</li>
+          <li><strong>🔧 Avería:</strong> Una cola se cierra durante 30s.</li>
+        </ul>
+      </div>
+
+      <div class="help-section">
+        <h3>🕐 Hora punta</h3>
+        <p>Ocasionalmente, los clientes llegan x3 más rápido durante 30 segundos. ¡Prepárate!</p>
+      </div>
+
+      <div class="help-section">
+        <h3>💾 Guardar</h3>
+        <p>El juego guarda automáticamente. También puedes exportar/importar tu partida como archivo JSON.</p>
+      </div>
+    </div>
+  </div>
+
   <div id="floaters"></div>
   <div id="toasts"></div>
+
+  <button id="help-btn" class="help-fab" title="Ayuda">❓</button>
 
   <script src="game.js"></script>
 </body>
