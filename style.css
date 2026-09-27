@@ -162,11 +162,47 @@ h1 {
 /* ---------- Escena ---------- */
 main { max-width: 1200px; margin: 0 auto; padding: 0 1rem 2rem; }
 
+/* Secciones del juego */
+.game-section {
+  background: var(--cream);
+  border: 2px solid var(--wood);
+  border-radius: 14px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+  box-shadow: 0 3px 8px rgba(107, 69, 37, 0.15);
+}
+
+.game-section > h2.collapsible {
+  background: rgba(139, 94, 52, 0.1);
+  padding: 0.6rem 1rem;
+  margin: 0;
+  border-bottom: 2px solid var(--wood);
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 1rem;
+  color: var(--wood-dark);
+}
+
+.game-section > h2.collapsible:hover {
+  background: rgba(139, 94, 52, 0.15);
+  color: var(--green-dark);
+}
+
+.game-section > .collapsible-body {
+  padding: 1rem;
+}
+
+.game-section > .collapsible-body.collapsed {
+  display: none;
+}
+
 .scene {
   display: grid;
   grid-template-columns: 1fr 200px 1fr;
   gap: 1rem;
-  margin-top: 1rem;
   background: linear-gradient(180deg, #f3ddb5, #e8c98f);
   border: 3px solid var(--wood);
   border-radius: 18px;
@@ -179,7 +215,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem 2rem; }
   h1 { font-size: 1.3rem; }
 }
 
-.scene h2 {
+.scene h3 {
   font-size: 1rem;
   color: var(--wood-dark);
   margin-bottom: 0.5rem;
@@ -423,7 +459,6 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem 2rem; }
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 0.6rem;
-  margin-top: 1rem;
 }
 
 .shop-card {
@@ -474,35 +509,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem 2rem; }
 
 .shop-card .owned { font-weight: 800; color: var(--green-dark); font-size: 0.9rem; }
 
-/* ---------- Grid inferior ---------- */
-.bottom-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.bottom-grid .full-width {
-  grid-column: 1 / -1;
-}
-
-@media (max-width: 900px) {
-  .bottom-grid { grid-template-columns: 1fr; }
-}
-
-.bottom-grid h2 { font-size: 1rem; color: var(--wood-dark); margin-bottom: 0.5rem; }
-
 /* Secciones plegables */
-h2.collapsible {
-  cursor: pointer;
-  user-select: none;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-h2.collapsible:hover { color: var(--green-dark); }
-
 h2.collapsible .arrow {
   font-size: 0.7rem;
   color: var(--muted);

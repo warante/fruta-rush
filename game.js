@@ -27,6 +27,8 @@ const HELPERS = [
 const CART_COSTS = [120, 300, 750, 1800, 4500, 10000, 25000, 60000];
 const QUEUE_COSTS = [200, 500, 1200, 3000, 7500, 18000, 45000];
 const MAX_QUEUES = 8;
+const QUEUE_CAP_COSTS = [150, 400, 1000, 2500]; // Aumentar capacidad de cola: 2→3→4→5
+const MAX_QUEUE_CAP = 5;
 const BLENDER_COST = 800;
 const OVEN_COST = 3000;
 const JUICER_COST = 8000;
@@ -127,6 +129,7 @@ function defaultState() {
     fruitsUnlocked: 2,
     cartLevel: 0,
     decoLevel: 0,
+    queueCapacity: 2, // Capacidad máxima de clientes por cola
     blender: false,
     oven: false,
     juicer: false,
@@ -614,7 +617,7 @@ function buildCustomers(force) {
     const isCollapsed = queueCollapsed[qi] || false;
     header.innerHTML = `
       <span class="queue-title">COLA ${qi + 1}</span>
-      <span class="queue-count">${q.closed ? "🔧" : count > 0 ? count + " 👥" : "vacía"}</span>
+      <span class="queue-count">${q.closed ? "" : count + "/" + state.queueCapacity + " 👥"}</span>
       <span class="queue-arrow">${isCollapsed ? "▶" : "▼"}</span>
     `;
     header.addEventListener("click", () => {
@@ -969,6 +972,15 @@ function buildShopBar() {
     ${queueMaxed ? `<div class="owned">MAX</div>` : `<button id="buy-queue">${fmt(QUEUE_COSTS[state.queues.length - 1])} 🪙</button>`}`);
   if (!queueMaxed) queueCard.querySelector("#buy-queue").addEventListener("click", buyQueue);
 
+  // Capacidad de cola
+  const queueCapMaxed = state.queueCapacity >= MAX_QUEUE_CAP;
+  const queueCapCard = shopCard(`
+    <div class="big">📏</div>
+    <div class="info"><div class="name">Tamaño de cola: ${state.queueCapacity}/${MAX_QUEUE_CAP}</div>
+    <div class="desc">Más clientes por cola</div></div>
+    ${queueCapMaxed ? `<div class="owned">MAX</div>` : `<button id="buy-queue-cap">${fmt(QUEUE_CAP_COSTS[state.queueCapacity - 2])} </button>`}`);
+  if (!queueCapMaxed) queueCapCard.querySelector("#buy-queue-cap").addEventListener("click", buyQueueCap);
+
   // Licuadora
   const blenderCard = shopCard(`
     <div class="big">🥤</div>
@@ -1020,6 +1032,8 @@ function updateShopBar() {
   if (bc) bc.disabled = state.money < CART_COSTS[state.cartLevel];
   const bq = $("buy-queue");
   if (bq) bq.disabled = state.money < QUEUE_COSTS[state.queues.length - 1];
+  const bqc = $("buy-queue-cap");
+  if (bqc) bqc.disabled = state.money < QUEUE_CAP_COSTS[state.queueCapacity - 2];
   const bb = $("buy-blender");
   if (bb) bb.disabled = state.money < BLENDER_COST;
   const bo = $("buy-oven");
@@ -1070,6 +1084,20 @@ function buyQueue() {
   state.queues.push(newQueue());
   sfx("buy");
   toast("👥 ¡Nueva cola!");
+  buildShopBar();
+  buildCustomers(true);
+  updateDynamic();
+  checkAchievements(false);
+}
+
+function buyQueueCap() {
+  if (state.queueCapacity >= MAX_QUEUE_CAP) return;
+  const cost = QUEUE_CAP_COSTS[state.queueCapacity - 2];
+  if (state.money < cost) return;
+  state.money -= cost;
+  state.queueCapacity++;
+  sfx("buy");
+  toast(`📏 ¡Tamaño de cola aumentado a ${state.queueCapacity}!`);
   buildShopBar();
   buildCustomers(true);
   updateDynamic();
@@ -1348,7 +1376,7 @@ function tick() {
 
     // Spawn de clientes
     if (!Number.isFinite(q.nextSpawnAt)) q.nextSpawnAt = now + 1500;
-    if (now >= q.nextSpawnAt && q.customers.length < 5) {
+    if (now >= q.nextSpawnAt && q.customers.length < state.queueCapacity) {
       q.customers.push(makeCustomer());
       customersChanged = true;
       q.nextSpawnAt = now + spawnDelay();

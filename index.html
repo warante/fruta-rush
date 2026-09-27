@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -33,43 +33,55 @@
   </header>
 
   <main>
-    <!-- Escena principal -->
-    <section class="scene">
-      <div class="baskets-wrap">
-        <h2>Cestos</h2>
-        <div class="baskets" id="baskets"></div>
-      </div>
+    <!-- Línea de caja -->
+    <section class="game-section">
+      <h2 class="collapsible" data-target="linea-caja">🛒 Línea de caja <span class="arrow">▼</span></h2>
+      <div id="linea-caja" class="collapsible-body">
+        <div class="scene">
+          <div class="baskets-wrap">
+            <h3>Cestos</h3>
+            <div class="baskets" id="baskets"></div>
+          </div>
 
-      <div class="bag-zone">
-        <div id="bag" class="bag" title="Click para vaciar la bolsa">🛍️</div>
-        <div id="bag-contents" class="bag-contents">vacía</div>
-        <div id="bag-count" class="bag-count">0/4</div>
-        <p class="hint">Click en cestos para llenar<br>Click en 🛍️ para vaciar</p>
-      </div>
+          <div class="bag-zone">
+            <div id="bag" class="bag" title="Click para vaciar la bolsa">🛍️</div>
+            <div id="bag-contents" class="bag-contents">vacía</div>
+            <div id="bag-count" class="bag-count">0/4</div>
+            <p class="hint">Click en cestos para llenar<br>Click en ️ para vaciar</p>
+          </div>
 
-      <div class="customers-wrap">
-        <h2>Cola de clientes</h2>
-        <div class="customers" id="customers"></div>
+          <div class="customers-wrap">
+            <h3>Cola de clientes</h3>
+            <div class="customers" id="customers"></div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- Barra de compras -->
-    <section class="shop-bar" id="shop-bar"></section>
+    <!-- Mejoras -->
+    <section class="game-section">
+      <h2 class="collapsible" data-target="mejoras">🛍️ Mejoras <span class="arrow">▼</span></h2>
+      <div id="mejoras" class="collapsible-body">
+        <div class="shop-bar" id="shop-bar"></div>
+      </div>
+    </section>
 
-    <!-- Personal, estadísticas y logros -->
-    <section class="bottom-grid">
-      <div>
-        <h2>👥 Personal</h2>
-        <div id="helpers"></div>
-      </div>
-      <div>
-        <h2 class="collapsible" data-target="stats">📊 Estadísticas <span class="arrow">▼</span></h2>
-        <div id="stats" class="collapsible-body"></div>
-      </div>
-      <div class="full-width">
-        <h2 class="collapsible" data-target="achievements">🏆 Logros <span class="arrow">▼</span></h2>
-        <div id="achievements" class="collapsible-body"></div>
-      </div>
+    <!-- Personal -->
+    <section class="game-section">
+      <h2 class="collapsible" data-target="helpers">👥 Personal <span class="arrow">▼</span></h2>
+      <div id="helpers" class="collapsible-body"></div>
+    </section>
+
+    <!-- Estadísticas -->
+    <section class="game-section">
+      <h2 class="collapsible" data-target="stats">📊 Estadísticas <span class="arrow">▼</span></h2>
+      <div id="stats" class="collapsible-body"></div>
+    </section>
+
+    <!-- Logros -->
+    <section class="game-section">
+      <h2 class="collapsible" data-target="achievements">🏆 Logros <span class="arrow">▼</span></h2>
+      <div id="achievements" class="collapsible-body"></div>
     </section>
 
     <!-- Guardado / carga / opciones -->
