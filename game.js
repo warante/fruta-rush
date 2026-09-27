@@ -598,9 +598,11 @@ function orderChipsHTML(order) {
 }
 
 const queueCollapsed = {};
+// Inicializar todas las colas como desplegadas
+for (let i = 0; i < MAX_QUEUES; i++) queueCollapsed[i] = false;
 
 function buildCustomers(force) {
-  const key = state.queues.map((q) => q.customers.length + (q.closed ? "c" : "o")).join("|") + "#" + state.queues.length;
+  const key = state.queues.map((q) => q.customers.length + (q.closed ? "c" : "o")).join("|") + "#" + state.queues.length + "#cap" + state.queueCapacity;
   if (!force && key === custKey) return;
   custKey = key;
   customersEl.innerHTML = "";
@@ -620,7 +622,8 @@ function buildCustomers(force) {
       <span class="queue-count">${q.closed ? "" : count + "/" + state.queueCapacity + " 👥"}</span>
       <span class="queue-arrow">${isCollapsed ? "▶" : "▼"}</span>
     `;
-    header.addEventListener("click", () => {
+    header.addEventListener("click", (e) => {
+      e.stopPropagation();
       queueCollapsed[qi] = !queueCollapsed[qi];
       buildCustomers(true);
     });
@@ -635,37 +638,44 @@ function buildCustomers(force) {
       closed.className = "queue-closed";
       closed.textContent = "🔧 Cerrada";
       body.appendChild(closed);
-    } else if (q.customers.length === 0) {
-      const waiting = document.createElement("div");
-      waiting.className = "waiting";
-      waiting.textContent = "Esperando…";
-      body.appendChild(waiting);
     } else {
-      q.customers.forEach((c, ci) => {
-        const card = document.createElement("div");
-        card.className = "customer" + (c.vip ? " vip" : "") + (ci === 0 ? " first" : "");
-        card.innerHTML = `
-          <div class="face">${c.face}</div>
-          <div style="flex:1">
-            <div class="order">${orderChipsHTML(c.order)}</div>
-            <div class="patience"><div class="patience-fill"></div></div>
-            <div class="serving" hidden>
-              <span class="serving-emoji">👤</span>
-              <div class="serving-bar"><div class="serving-fill"></div></div>
-            </div>
-          </div>`;
-        card.addEventListener("click", () => deliver(qi, ci));
-        body.appendChild(card);
-        if (!state._custEls[qi]) state._custEls[qi] = [];
-        state._custEls[qi][ci] = {
-          card,
-          fill: card.querySelector(".patience-fill"),
-          faceEl: card.querySelector(".face"),
-          serving: card.querySelector(".serving"),
-          servingEmoji: card.querySelector(".serving-emoji"),
-          servingFill: card.querySelector(".serving-fill"),
-        };
-      });
+      // Renderizar siempre queueCapacity huecos para evitar rebotes de layout
+      for (let si = 0; si < state.queueCapacity; si++) {
+        const c = q.customers[si];
+        if (c) {
+          const card = document.createElement("div");
+          card.className = "customer" + (c.vip ? " vip" : "") + (si === 0 ? " first" : "");
+          card.innerHTML = `
+            <div class="face">${c.face}</div>
+            <div style="flex:1">
+              <div class="order">${orderChipsHTML(c.order)}</div>
+              <div class="patience"><div class="patience-fill"></div></div>
+              <div class="serving" hidden>
+                <span class="serving-emoji">👤</span>
+                <div class="serving-bar"><div class="serving-fill"></div></div>
+              </div>
+            </div>`;
+          card.addEventListener("click", () => deliver(qi, si));
+          body.appendChild(card);
+          if (!state._custEls[qi]) state._custEls[qi] = [];
+          state._custEls[qi][si] = {
+            card,
+            fill: card.querySelector(".patience-fill"),
+            faceEl: card.querySelector(".face"),
+            serving: card.querySelector(".serving"),
+            servingEmoji: card.querySelector(".serving-emoji"),
+            servingFill: card.querySelector(".serving-fill"),
+          };
+        } else {
+          // Hueco vacío
+          const empty = document.createElement("div");
+          empty.className = "customer empty-slot";
+          empty.innerHTML = `<div class="face empty-face"></div><div style="flex:1"><div class="order empty-order">Hueco libre</div></div>`;
+          body.appendChild(empty);
+          if (!state._custEls[qi]) state._custEls[qi] = [];
+          state._custEls[qi][si] = null;
+        }
+      }
     }
     slot.appendChild(body);
     customersEl.appendChild(slot);
@@ -684,9 +694,11 @@ function updateCustomers() {
   const now = Date.now();
   state.queues.forEach((q, qi) => {
     if (!state._custEls[qi]) return;
-    q.customers.forEach((c, ci) => {
-      const els = state._custEls[qi][ci];
-      if (!els) return;
+    // Recorrer todos los huecos de la cola (incluidos los vacíos)
+    for (let si = 0; si < state.queueCapacity; si++) {
+      const els = state._custEls[qi][si];
+      const c = q.customers[si];
+      if (!els || !c) continue;
       const pct = Math.max(0, c.patience * 100);
       els.fill.style.width = pct + "%";
       els.fill.style.background = pct > 50 ? "var(--green)" : pct > 25 ? "var(--orange)" : "var(--danger)";
@@ -705,7 +717,7 @@ function updateCustomers() {
       } else if (els.serving) {
         els.serving.hidden = true;
       }
-    });
+    }
   });
 }
 
@@ -1082,6 +1094,7 @@ function buyQueue() {
   if (state.money < cost) return;
   state.money -= cost;
   state.queues.push(newQueue());
+  queueCollapsed[state.queues.length - 1] = false;
   sfx("buy");
   toast("👥 ¡Nueva cola!");
   buildShopBar();

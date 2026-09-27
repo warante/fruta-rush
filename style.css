@@ -359,6 +359,10 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem 2rem; }
   border: 2px solid var(--wood);
   border-radius: 10px;
   padding: 0.4rem 0.6rem;
+  height: 5rem;
+  min-height: 5rem;
+  box-sizing: border-box;
+  overflow: hidden;
   cursor: pointer;
   transition: transform 0.06s;
   user-select: none;
@@ -371,6 +375,29 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem 2rem; }
 .customer.first {
   border-color: var(--green);
   border-width: 3px;
+}
+
+/* Hueco vacío de cola */
+.customer.empty-slot {
+  border: 2px dashed #c9b189;
+  background: rgba(255, 255, 255, 0.2);
+  cursor: default;
+  opacity: 0.6;
+}
+
+.customer.empty-slot:hover {
+  transform: none;
+}
+
+.empty-face {
+  width: 1.8rem;
+  height: 1.8rem;
+}
+
+.empty-order {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-style: italic;
 }
 
 .customer:hover { transform: scale(1.02); }
@@ -425,7 +452,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem 2rem; }
   color: var(--wood-dark);
 }
 
-.serving[hidden] { display: none; }
+.serving[hidden] { visibility: hidden; }
 
 .serving-emoji { font-size: 1rem; }
 
