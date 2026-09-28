@@ -86,15 +86,48 @@ h1 {
   text-shadow: 0 1px 0 #fff;
 }
 
-.fidelity {
-  text-align: center;
-  margin-top: 0.2rem;
-  font-weight: 800;
-  color: #b8860b;
-  text-shadow: 0 1px 0 #fff;
+.franchise-panel {
+  width: calc(100% - 2rem);
+  max-width: 1168px;
+  margin: 0 auto 1rem;
 }
 
-.fidelity small { font-weight: 600; color: var(--muted); }
+.franchise-card-top, .franchise-stats {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.franchise-count { margin-left: auto; color: var(--muted); font-size: 0.75rem; font-weight: 600; }
+.franchise-district, .franchise-requirements { color: var(--muted); font-size: 0.75rem; }
+.franchise-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.6rem; }
+.franchise-card {
+  min-width: 0;
+  padding: 0.75rem;
+  border: 2px solid var(--wood);
+  border-radius: 14px;
+  background: var(--cream);
+  color: var(--text);
+  text-align: left;
+  box-shadow: 0 3px 8px rgba(107, 69, 37, 0.14);
+}
+button.franchise-card { cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+button.franchise-card:hover:not(.active) { transform: translateY(-2px); }
+.franchise-card.active { box-shadow: 0 0 0 3px var(--green), 0 4px 10px rgba(70, 112, 46, 0.2); }
+.franchise-card.residential { background: #fff8e7; border-top: 5px solid var(--green); }
+.franchise-card.downtown { background: #eef4f3; border-color: var(--blue); border-top-width: 5px; }
+.franchise-card.tourist { background: #fff2d1; border-color: #c18b36; border-top-width: 5px; }
+.franchise-card-top { min-height: 1.8rem; }
+.franchise-icon { font-size: 1.35rem; }
+.franchise-name { flex: 1; font-size: 0.9rem; font-weight: 800; }
+.franchise-active { padding: 0.15rem 0.35rem; border-radius: 6px; background: var(--green); color: white; font-size: 0.6rem; font-weight: 800; }
+.franchise-district { display: block; margin: 0.25rem 0 0.5rem; }
+.franchise-stats { justify-content: space-between; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.franchise-locked { border-style: dashed; }
+.franchise-requirements { min-height: 2rem; line-height: 1.4; }
+.franchise-open { width: 100%; margin-top: 0.45rem; padding: 0.4rem 0.6rem; border: 0; border-radius: 8px; background: var(--green); color: white; font-weight: 800; cursor: pointer; }
+.franchise-open:disabled { background: #c9bda5; cursor: not-allowed; }
+.franchise-card:focus-visible, .franchise-open:focus-visible { outline: 3px solid #46702e; outline-offset: 2px; }
 
 /* ---------- Banners ---------- */
 #rush-banner, #event-banner {
@@ -305,9 +338,18 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem 2rem; }
   opacity: 0.6;
 }
 
+.queue-slot.manual-queue { outline: 2px solid var(--green); background: var(--cream); }
+.queue-mode { padding: 0.25rem 0.4rem; border: 1px solid var(--wood); border-radius: 6px; background: var(--cream); color: var(--wood-dark); font: inherit; font-size: 0.7rem; font-weight: 700; cursor: pointer; }
+.queue-mode[aria-pressed="true"] { border-color: var(--green-dark); color: var(--green-dark); }
+.queue-mode:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.queue-mode-status { padding: 0.35rem 0.6rem; font-size: 0.75rem; font-weight: 600; color: var(--wood-dark); }
+.queue-manual-hint { color: var(--green-dark); }
+
 /* Encabezado plegable de cola */
 .queue-header {
   display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
   align-items: center;
   justify-content: space-between;
   padding: 0.4rem 0.6rem;
@@ -501,7 +543,6 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem 2rem; }
   text-align: center;
 }
 
-.shop-card.prestige { border-color: var(--gold); background: #fffbe6; }
 .shop-card .big { font-size: 2rem; }
 .shop-card .info { width: 100%; }
 .shop-card .name { font-weight: 800; font-size: 0.85rem; }
@@ -529,7 +570,6 @@ main { max-width: 1200px; margin: 0 auto; padding: 0 1rem 2rem; }
   flex-shrink: 0;
 }
 
-.shop-card.prestige button { background: #b8860b; }
 
 .shop-card button:not(:disabled):hover, .helper-card button:not(:disabled):hover { transform: scale(1.05); }
 .shop-card button:disabled, .helper-card button:disabled { background: #c9bda5; cursor: not-allowed; }

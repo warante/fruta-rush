@@ -29,8 +29,12 @@
       </div>
     </div>
     <div id="streak" class="streak" hidden>🔥 Racha x<span id="streak-n">0</span></div>
-    <div id="fidelity" class="fidelity" hidden>⭐ Fidelidad: <span id="fidelity-n">0</span> <small>(+<span id="fidelity-pct">0</span>% ventas)</small></div>
   </header>
+
+  <section class="franchise-panel game-section" aria-labelledby="franchise-heading">
+    <h2 id="franchise-heading" class="collapsible" data-target="franchise-list" aria-expanded="true" aria-controls="franchise-list"><span>🏪 Mis fruterías</span><span id="franchise-count" class="franchise-count"></span><span class="arrow">▼</span></h2>
+    <div id="franchise-list" class="franchise-list collapsible-body"></div>
+  </section>
 
   <main>
     <!-- Línea de caja -->
@@ -139,6 +143,8 @@
         <ul>
           <li>Contrata personal para que atienda clientes automáticamente.</li>
           <li>Cada empleado atiende a UN cliente a la vez.</li>
+          <li>Cada cola indica su <strong>modo actual</strong>. Pulsa <strong>Cambiar a manual</strong> para reservarla: solo la atiendes tú y el personal atiende las demás. Pulsa <strong>Cambiar a automático</strong> para devolverla al equipo.</li>
+          <li>Las ventas manuales dan una propina del 25%, que sube 5 puntos por pedido correcto consecutivo hasta el 75%. La cola reservada tiene un 25% más de paciencia.</li>
           <li>Tipos avanzados se desbloquean contratando suficientes del anterior.</li>
           <li>El <strong>Experto</strong> es muy rápido pero a veces se equivoca (-10% valor).</li>
         </ul>
@@ -150,7 +156,7 @@
           <li><strong>Carretilla:</strong> +2 capacidad de bolsa, +10% ventas, pedidos más grandes.</li>
           <li><strong>Colas:</strong> Hasta 8 colas para atender más clientes a la vez.</li>
           <li><strong>Decoración:</strong> +10% paciencia y +5% llegada de clientes por nivel.</li>
-          <li><strong>Franquicia:</strong> Reinicia la tienda pero ganas puntos de fidelidad permanentes.</li>
+          <li><strong>Franquicias:</strong> Abre tiendas en barrios nuevos. Cada una conserva sus mejoras, tiene clientes distintos y gana monedas mientras visitas otra.</li>
         </ul>
       </div>
 

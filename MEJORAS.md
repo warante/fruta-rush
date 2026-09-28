@@ -9,9 +9,9 @@
 - **Zumos y macedonias** 🥤: con la licuadora (800 🪙), el 25% de los
   pedidos son especiales: zumo (3 de una fruta, paga x3) y macedonia
   (3 frutas distintas, paga x2.5).
-- **Prestigio — Franquicia** 🏪: reinicia la tienda a cambio de puntos de
-  fidelidad (sqrt de ganancias / 5000). Cada punto: +10% ventas,
-  +3% paciencia, +5% velocidad del personal.
+- **Franquicias persistentes** 🏪: hasta tres tiendas con progreso propio,
+  barrios con clientela distinta y ganancias mientras visitas otro local.
+  Abrirlas requiere dinero, reputación y objetivos de personal/ventas.
 - **Decoración** 🪴: 10 niveles, +10% paciencia y +5% llegada por nivel.
 - **Sonidos WebAudio** 🔊: cha-ching al vender, campanilla al llegar
   cliente, zumbido al marcharse enfadado, error, compra y fanfarria de

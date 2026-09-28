@@ -35,21 +35,31 @@ const JUICER_COST = 8000;
 const DECO_BASE_COST = 150;
 const DECO_GROWTH = 2.2;
 const DECO_MAX = 10;
-const PRESTIGE_THRESHOLD = 5000;
+const MAX_OFFLINE_SECONDS = 8 * 60 * 60;
 
 const DAY_GOAL = 25;
 const BASE_PATIENCE = 35;
 const VARIETY_STEP = 0.5;
 const STREAK_STEP = 0.05;
 const STREAK_MAX = 0.5;
+const MANUAL_TIP = 0.25;
+const MANUAL_PATIENCE = 1.25;
 const HELPER_GROWTH = 1.5;
-const VIP_CHANCE = 0.12;
 const VIP_MULT = 5;
 const SPECIAL_CHANCE = 0.25;
 const RUSH_DURATION = 30000;
-const FID_SALE = 0.10;
-const FID_PATIENCE = 0.03;
-const FID_SPEED = 0.05;
+const FRANCHISE_CATALOG = [
+  { id: "barrio", name: "Frutería del Barrio", district: "Residencial", emoji: "🏡", style: "residential", arrival: 0.85, patience: 1.25, vipChance: 0.08, varietyBonus: 0 },
+  { id: "centro", name: "Mercado Central", district: "Centro", emoji: "🏙️", style: "downtown", arrival: 1.25, patience: 0.9, vipChance: 0.12, varietyBonus: 0, cost: 5000, reputation: 60, helper: "gerente", helperCount: 1, starterCash: 300 },
+  { id: "turistico", name: "Fruta de Temporada", district: "Turístico", emoji: "🏖️", style: "tourist", arrival: 1, patience: 1, vipChance: 0.25, varietyBonus: 1, cost: 50000, reputation: 70, sales: 250, starterCash: 1500 },
+];
+
+const STORE_FIELDS = [
+  "money", "totalEarned", "day", "salesToday", "fruitsUnlocked", "cartLevel", "decoLevel",
+  "queueCapacity", "blender", "oven", "juicer", "bag", "queues", "helpers", "helperTimers",
+  "helperAssignments", "streak", "rushUntil", "nextRushAt", "activeEvent", "eventUntil",
+  "nextEventAt", "stats", "lastSeen", "reputation",
+];
 
 const CUSTOMER_FACES = ["👩", "🧑", "👵", "👴", "👦", "👧", "🧔", "👱‍♀️", "🧓", "👨‍🦰", "👩‍🦱", "🧑‍🦳"];
 
@@ -99,20 +109,25 @@ const ACHIEVEMENTS = [
   { id: "deco3",      emoji: "🌸", name: "Toque Floral",        desc: "Decoración al nivel 3.",               cond: () => state.decoLevel >= 3 },
   { id: "deco5",      emoji: "🪴", name: "Tienda Bonita",       desc: "Decoración al nivel 5.",               cond: () => state.decoLevel >= 5 },
   { id: "deco10",     emoji: "🏰", name: "Palacio de Fruta",    desc: "Decoración al máximo.",                cond: () => state.decoLevel >= DECO_MAX },
-  { id: "prestige1",  emoji: "🏪", name: "Segunda Casa",        desc: "Abre tu primera franquicia.",          cond: () => state.prestiges >= 1 },
-  { id: "prestige3",  emoji: "🏢", name: "Cadena",              desc: "Abre 3 franquicias.",                  cond: () => state.prestiges >= 3 },
+  { id: "prestige1",  emoji: "🏪", name: "Segunda Casa",        desc: "Abre tu primera franquicia.",          cond: () => state.franchises.length >= 2 },
+  { id: "prestige3",  emoji: "🏢", name: "Cadena",              desc: "Abre 3 franquicias.",                  cond: () => state.franchises.length >= 3 },
   { id: "event1",     emoji: "🎲", name: "Suertudo",            desc: "Sobrevive un evento aleatorio.",       cond: () => state.eventsSeen >= 1 },
   { id: "event10",    emoji: "🎰", name: "Vividor",             desc: "Sobrevive 10 eventos.",                cond: () => state.eventsSeen >= 10 },
   { id: "allmax",     emoji: "💎", name: "Todo al Máximo",      desc: "Carretilla, decoración, colas y máquinas al máximo.", cond: () => state.cartLevel >= CART_COSTS.length && state.decoLevel >= DECO_MAX && state.queues.length >= MAX_QUEUES && state.blender && state.oven && state.juicer },
 ];
 
-const SAVE_KEY = "fruta-rush-v3";
+const SAVE_KEY = "fruta-rush-v4";
+const LEGACY_SAVE_KEY = "fruta-rush-v3";
 const TICK_MS = 100;
 
 /* ==================== Estado ==================== */
 
 function newQueue() {
-  return { customers: [], nextSpawnAt: Date.now() + 1000 + Math.random() * 2000, closed: false };
+  return { customers: [], nextSpawnAt: Date.now() + 1000 + Math.random() * 2000, closed: false, manual: false };
+}
+
+function emptyStoreRecord(profile) {
+  return { ...profile, unlocked: true, data: null };
 }
 
 function defaultState() {
@@ -126,6 +141,7 @@ function defaultState() {
     bestStreak: 0,
     day: 1,
     salesToday: 0,
+    reputation: 50,
     fruitsUnlocked: 2,
     cartLevel: 0,
     decoLevel: 0,
@@ -139,8 +155,8 @@ function defaultState() {
     helperTimers: {},
     helperAssignments: {},
     achievements: {},
-    fidelity: 0,
-    prestiges: 0,
+    franchises: [emptyStoreRecord(FRANCHISE_CATALOG[0])],
+    activeFranchiseId: "barrio",
     vipsServed: 0,
     rushesSeen: 0,
     rushUntil: 0,
@@ -173,22 +189,26 @@ function fmt(n) {
 }
 
 function fruitById(id) { return FRUITS.find((f) => f.id === id); }
+function activeFranchise() { return state.franchises.find((franchise) => franchise.id === state.activeFranchiseId); }
 function bagCap() { return 4 + 2 * state.cartLevel; }
 function cartMult() { return 1 + 0.1 * state.cartLevel; }
-function priceMult() { return 1 + FID_SALE * state.fidelity; }
-function streakMult() { return 1 + Math.min(state.streak * STREAK_STEP, STREAK_MAX); }
+function priceMult() { return 1; }
+function manualTip(streak) { return MANUAL_TIP + Math.min(Math.max(0, streak - 1) * STREAK_STEP, STREAK_MAX); }
+function streakMult() { return 1 + manualTip(state.streak); }
 function patienceMax() {
-  let mult = BASE_PATIENCE * (1 + 0.1 * state.decoLevel) * (1 + FID_PATIENCE * state.fidelity);
+  const franchise = activeFranchise() || FRANCHISE_CATALOG[0];
+  let mult = BASE_PATIENCE * (1 + 0.1 * state.decoLevel) * franchise.patience;
   if (state.activeEvent === "review") mult *= 1.2;
   return mult;
 }
 function helperSpeedMult() {
-  let mult = 1 + FID_SPEED * state.fidelity;
+  let mult = 1;
   if (state.activeEvent === "inspect") mult *= 0.7;
   return mult;
 }
 function arrivalMult() {
-  let mult = 1 + 0.05 * state.decoLevel;
+  const franchise = activeFranchise() || FRANCHISE_CATALOG[0];
+  let mult = (1 + 0.05 * state.decoLevel) * franchise.arrival;
   if (state.activeEvent === "rain") mult *= 0.5;
   return mult;
 }
@@ -200,7 +220,6 @@ function helperCost(h) { return Math.ceil(h.baseCost * Math.pow(HELPER_GROWTH, s
 function decoCost() { return Math.ceil(DECO_BASE_COST * Math.pow(DECO_GROWTH, state.decoLevel)); }
 function nextFruit() { return FRUITS[state.fruitsUnlocked] || null; }
 function isRush() { return Date.now() < state.rushUntil; }
-function prestigeGain() { return Math.floor(Math.sqrt(state.totalEarned / PRESTIGE_THRESHOLD)); }
 
 function isHelperUnlocked(h) {
   if (!h.unlockReq) return true;
@@ -264,7 +283,8 @@ function makeOrder(vip) {
   }
 
   // Pedido normal - tamaño influido por carretilla
-  const maxDistinct = Math.min(vip ? 4 + cartBonus : 3 + cartBonus, unlocked.length);
+  const franchise = activeFranchise() || FRANCHISE_CATALOG[0];
+  const maxDistinct = Math.min((vip ? 4 : 3) + cartBonus + franchise.varietyBonus, unlocked.length);
   const minDistinct = vip ? Math.min(2, maxDistinct) : 1;
   const distinct = minDistinct + Math.floor(Math.random() * (maxDistinct - minDistinct + 1));
   const pool = [...unlocked];
@@ -283,7 +303,8 @@ function makeOrder(vip) {
 }
 
 function makeCustomer() {
-  const vip = Math.random() < VIP_CHANCE;
+  const franchise = activeFranchise() || FRANCHISE_CATALOG[0];
+  const vip = Math.random() < franchise.vipChance;
   return {
     face: vip ? "🤩" : CUSTOMER_FACES[Math.floor(Math.random() * CUSTOMER_FACES.length)],
     vip,
@@ -347,6 +368,7 @@ function sfx(name) {
 
 function save() {
   state.lastSeen = Date.now();
+  saveActiveFranchise();
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(state));
   } catch (e) { /* sin espacio */ }
@@ -354,9 +376,32 @@ function save() {
 
 function sanitizeLoaded(data) {
   state = Object.assign(defaultState(), data);
+  const legacySave = !Array.isArray(data.franchises);
+  const legacyFidelity = Number.isFinite(data.fidelity) ? Math.max(0, data.fidelity) : 0;
+  if (legacySave && legacyFidelity > 0) {
+    const expansionFunds = legacyFidelity * 5000;
+    state.money += expansionFunds;
+    pendingToasts.push(`⭐ Tu fidelidad anterior se convirtió en ${fmt(expansionFunds)} 🪙 para expandir la cadena`);
+  }
+  delete state.fidelity;
+  delete state.prestiges;
+  if (!Array.isArray(state.franchises) || state.franchises.length === 0) {
+    state.franchises = [emptyStoreRecord(FRANCHISE_CATALOG[0])];
+  }
+  state.franchises = state.franchises.map((record, index) => {
+    const profile = FRANCHISE_CATALOG.find((franchise) => franchise.id === record.id) || FRANCHISE_CATALOG[index];
+    return profile ? { ...profile, ...record, data: record.data || null } : null;
+  }).filter(Boolean).slice(0, FRANCHISE_CATALOG.length);
+  if (!state.franchises.some((franchise) => franchise.id === state.activeFranchiseId)) {
+    state.activeFranchiseId = state.franchises[0].id;
+  }
+  if (!Number.isFinite(state.reputation)) state.reputation = 50;
   if (!Array.isArray(state.queues) || state.queues.length === 0) state.queues = [newQueue()];
   state.queues = state.queues.slice(0, MAX_QUEUES);
+  let manualQueueFound = false;
   state.queues.forEach((q) => {
+    q.manual = q.manual === true && !manualQueueFound;
+    if (q.manual) manualQueueFound = true;
     if (!Array.isArray(q.customers)) q.customers = [];
     q.customers.forEach((c) => {
       c.patience = 1;
@@ -377,16 +422,20 @@ function sanitizeLoaded(data) {
 
 function load() {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    const currentSave = localStorage.getItem(SAVE_KEY);
+    const raw = currentSave || localStorage.getItem(LEGACY_SAVE_KEY);
     if (!raw) return;
     sanitizeLoaded(JSON.parse(raw));
     offlineGains();
+    saveActiveFranchise();
+    if (!currentSave) save();
   } catch (e) {
     console.warn("No se pudo cargar la partida", e);
   }
 }
 
 function helpersRate() {
+  if (state.queues.every((q) => q.manual)) return 0;
   return HELPERS.reduce((s, h) => s + (state.helpers[h.id] || 0) / h.interval, 0) * helperSpeedMult();
 }
 
@@ -398,14 +447,80 @@ function avgOrderValue() {
 
 function offlineGains() {
   if (!state.lastSeen) return;
-  const elapsed = (Date.now() - state.lastSeen) / 1000;
+  const elapsed = Math.min(MAX_OFFLINE_SECONDS, (Date.now() - state.lastSeen) / 1000);
   if (elapsed < 60) return;
   const gain = helpersRate() * elapsed * 0.5 * avgOrderValue();
   if (gain < 1) return;
   state.money += gain;
   state.totalEarned += gain;
   state.lifetimeEarned += gain;
-  pendingToasts.push(`💤 Tu personal ganó ${fmt(gain)} monedas mientras no estabas`);
+  const message = `💤 ${activeFranchise()?.name || "Tu tienda"} ganó ${fmt(gain)} monedas mientras no estabas`;
+  if (document.readyState === "complete") toast(message);
+  else pendingToasts.push(message);
+}
+
+function saveActiveFranchise() {
+  const franchise = activeFranchise();
+  if (!franchise) return;
+  franchise.data = Object.fromEntries(STORE_FIELDS.map((field) => [field, JSON.parse(JSON.stringify(state[field]))]));
+}
+
+function activateFranchise(franchise) {
+  const fresh = defaultState();
+  const data = franchise.data || Object.fromEntries(STORE_FIELDS.map((field) => [field, fresh[field]]));
+  STORE_FIELDS.forEach((field) => { state[field] = JSON.parse(JSON.stringify(data[field])); });
+  state.lastSeen = Number.isFinite(state.lastSeen) ? state.lastSeen : Date.now();
+  if (!state.queues.length) state.queues = [newQueue()];
+  state.queues.forEach((queue) => { queue.closed = false; });
+  if (!state.nextRushAt) scheduleRush();
+  if (!state.nextEventAt) scheduleEvent();
+  offlineGains();
+  state.lastSeen = Date.now();
+  franchise.data = Object.fromEntries(STORE_FIELDS.map((field) => [field, JSON.parse(JSON.stringify(state[field]))]));
+}
+
+function franchiseRequirement(profile) {
+  const checks = [
+    state.money >= profile.cost,
+    state.reputation >= profile.reputation,
+    !profile.helper || (state.helpers[profile.helper] || 0) >= profile.helperCount,
+    !profile.sales || state.totalSales >= profile.sales,
+  ];
+  return checks.every(Boolean);
+}
+
+function openNextFranchise() {
+  const profile = FRANCHISE_CATALOG[state.franchises.length];
+  if (!profile || !franchiseRequirement(profile)) return;
+  state.money -= profile.cost;
+  state.lastSeen = Date.now();
+  saveActiveFranchise();
+  const franchise = emptyStoreRecord(profile);
+  state.franchises.push(franchise);
+  state.activeFranchiseId = franchise.id;
+  activateFranchise(franchise);
+  state.money = profile.starterCash;
+  lastTick = Date.now();
+  sfx("buy");
+  toast(`${profile.emoji} ¡Abrió ${profile.name}!`);
+  rebuildAll();
+  save();
+  checkAchievements(false);
+}
+
+function switchFranchise(id) {
+  if (id === state.activeFranchiseId) return;
+  const target = state.franchises.find((franchise) => franchise.id === id);
+  if (!target) return;
+  state.lastSeen = Date.now();
+  saveActiveFranchise();
+  state.activeFranchiseId = target.id;
+  activateFranchise(target);
+  lastTick = Date.now();
+  custKey = null;
+  rebuildAll();
+  save();
+  toast(`${target.emoji} ${target.name}`);
 }
 
 /* ==================== Guardar / cargar desde disco ==================== */
@@ -414,7 +529,7 @@ function exportSave() {
   save();
   const payload = {
     game: "fruta-rush",
-    version: 3,
+    version: 4,
     exportedAt: new Date().toISOString(),
     state,
   };
@@ -437,6 +552,8 @@ function importSave(file) {
       const loaded = data && data.state ? data.state : data;
       if (!loaded || typeof loaded.money !== "number") throw new Error("formato inválido");
       sanitizeLoaded(loaded);
+      offlineGains();
+      saveActiveFranchise();
       rebuildAll();
       save();
       toast("📂 Partida cargada");
@@ -458,9 +575,8 @@ const dayFillEl = $("day-fill");
 const dayProgressEl = $("day-progress");
 const streakEl = $("streak");
 const streakNEl = $("streak-n");
-const fidelityEl = $("fidelity");
-const fidelityNEl = $("fidelity-n");
-const fidelityPctEl = $("fidelity-pct");
+const franchiseListEl = $("franchise-list");
+const franchiseCountEl = $("franchise-count");
 const rushBannerEl = $("rush-banner");
 const rushTimerEl = $("rush-timer");
 const eventBannerEl = $("event-banner");
@@ -601,6 +717,22 @@ const queueCollapsed = {};
 // Inicializar todas las colas como desplegadas
 for (let i = 0; i < MAX_QUEUES; i++) queueCollapsed[i] = false;
 
+function toggleManualQueue(qi) {
+  const reserve = !state.queues[qi].manual;
+  state.queues.forEach((q, index) => {
+    const manual = reserve && index === qi;
+    if (Boolean(q.manual) !== manual) {
+      q.customers.forEach((c) => { c.maxPatience *= manual ? MANUAL_PATIENCE : 1 / MANUAL_PATIENCE; });
+    }
+    q.manual = manual;
+  });
+  for (const [key, assignment] of Object.entries(state.helperAssignments)) {
+    if (assignment && state.queues[assignment.queueIndex]?.manual) delete state.helperAssignments[key];
+  }
+  buildCustomers(true);
+  save();
+}
+
 function buildCustomers(force) {
   const key = state.queues.map((q) => q.customers.length + (q.closed ? "c" : "o")).join("|") + "#" + state.queues.length + "#cap" + state.queueCapacity;
   if (!force && key === custKey) return;
@@ -610,7 +742,7 @@ function buildCustomers(force) {
 
   state.queues.forEach((q, qi) => {
     const slot = document.createElement("div");
-    slot.className = "queue-slot" + (q.closed ? " closed" : "");
+    slot.className = "queue-slot" + (q.closed ? " closed" : "") + (q.manual ? " manual-queue" : "");
 
     // Encabezado plegable (siempre visible)
     const header = document.createElement("div");
@@ -620,14 +752,24 @@ function buildCustomers(force) {
     header.innerHTML = `
       <span class="queue-title">COLA ${qi + 1}</span>
       <span class="queue-count">${q.closed ? "" : count + "/" + state.queueCapacity + " 👥"}</span>
+      <button type="button" class="queue-mode" aria-pressed="${Boolean(q.manual)}" aria-label="Cambiar cola ${qi + 1} a modo ${q.manual ? "automático" : "manual"}">Cambiar a ${q.manual ? "automático" : "manual"}</button>
       <span class="queue-arrow">${isCollapsed ? "▶" : "▼"}</span>
     `;
+    header.querySelector(".queue-mode").addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleManualQueue(qi);
+    });
     header.addEventListener("click", (e) => {
       e.stopPropagation();
       queueCollapsed[qi] = !queueCollapsed[qi];
       buildCustomers(true);
     });
     slot.appendChild(header);
+
+    const hint = document.createElement("p");
+    hint.className = "queue-mode-status" + (q.manual ? " queue-manual-hint" : "");
+    hint.textContent = q.manual ? "Modo manual · solo atiendes tú" : "Modo automático · disponible para el personal";
+    slot.appendChild(hint);
 
     // Cuerpo plegable
     const body = document.createElement("div");
@@ -692,6 +834,9 @@ function getServingAssignment(qi, customerId) {
 
 function updateCustomers() {
   const now = Date.now();
+  customersEl.querySelectorAll(".queue-manual-hint").forEach((hint) => {
+    hint.textContent = `Modo manual · solo atiendes tú · próxima propina +${Math.round(manualTip(state.streak + 1) * 100)}% · más paciencia`;
+  });
   state.queues.forEach((q, qi) => {
     if (!state._custEls[qi]) return;
     // Recorrer todos los huecos de la cola (incluidos los vacíos)
@@ -744,6 +889,7 @@ function completeSale(qi, ci, manual, helperId) {
   state.money += value;
   state.totalEarned += value;
   state.lifetimeEarned += value;
+  state.reputation = Math.min(100, state.reputation + (manual ? 1.5 : 0.3));
   state.totalSales++;
   state.salesToday++;
   if (c.vip) state.vipsServed++;
@@ -797,6 +943,7 @@ function deliver(qi, ci) {
     buildCustomers(true);
   } else {
     state.streak = 0;
+    state.reputation = Math.max(0, state.reputation - 0.1);
     q.customers[ci].patience = Math.max(0.05, q.customers[ci].patience - 0.2);
     sfx("error");
     toast("❌ Ese no es su pedido");
@@ -811,7 +958,7 @@ function autoServeOne(helperKey, helper) {
   let bestTime = Infinity;
 
   state.queues.forEach((q, qi) => {
-    if (q.closed || q.customers.length === 0) return;
+    if (q.closed || q.manual || q.customers.length === 0) return;
     q.customers.forEach((c) => {
       if (c.spawnedAt < bestTime) {
         // Verificar que otro helper no esté atendiendo a este cliente
@@ -943,6 +1090,68 @@ function maybeEvent(now) {
 
 /* ==================== Barra de compras ==================== */
 
+function buildFranchisePanel() {
+  franchiseListEl.innerHTML = "";
+  state.franchises.forEach((franchise) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `franchise-card ${franchise.style}`;
+    button.dataset.franchiseId = franchise.id;
+    button.innerHTML = `
+      <span class="franchise-card-top"><span class="franchise-icon">${franchise.emoji}</span><span class="franchise-name">${franchise.name}</span><span class="franchise-active" hidden>ACTIVA</span></span>
+      <span class="franchise-district">${franchise.district} · ${franchiseTrait(franchise)}</span>
+      <span class="franchise-stats"><span><strong data-money>0</strong> 🪙</span><span>⭐ <strong data-reputation>50</strong></span></span>`;
+    button.addEventListener("click", () => switchFranchise(franchise.id));
+    franchiseListEl.appendChild(button);
+  });
+
+  const next = FRANCHISE_CATALOG[state.franchises.length];
+  if (next) {
+    const card = document.createElement("article");
+    card.className = `franchise-card franchise-locked ${next.style}`;
+    card.innerHTML = `
+      <div class="franchise-card-top"><span class="franchise-icon">🔒</span><span class="franchise-name">${next.name}</span></div>
+      <p class="franchise-district">${next.district} · ${franchiseTrait(next)}</p>
+      <p class="franchise-requirements" data-requirements></p>
+      <button class="franchise-open" data-open-franchise>🌱 Abrir tienda</button>`;
+    card.querySelector("[data-open-franchise]").addEventListener("click", openNextFranchise);
+    franchiseListEl.appendChild(card);
+  }
+  updateFranchisePanel();
+}
+
+function franchiseTrait(franchise) {
+  if (franchise.id === "barrio") return "clientes pacientes";
+  if (franchise.id === "centro") return "más afluencia";
+  return "más clientes VIP y pedidos variados";
+}
+
+function updateFranchisePanel() {
+  franchiseCountEl.textContent = `${state.franchises.length}/${FRANCHISE_CATALOG.length} abiertas`;
+  franchiseListEl.querySelectorAll("[data-franchise-id]").forEach((button) => {
+    const franchise = state.franchises.find((item) => item.id === button.dataset.franchiseId);
+    if (!franchise) return;
+    const data = franchise.id === state.activeFranchiseId ? state : franchise.data || {};
+    button.classList.toggle("active", franchise.id === state.activeFranchiseId);
+    button.setAttribute("aria-pressed", String(franchise.id === state.activeFranchiseId));
+    button.querySelector("[data-money]").textContent = fmt(data.money || 0);
+    button.querySelector("[data-reputation]").textContent = String(Math.round(data.reputation ?? 50));
+    button.querySelector(".franchise-active").hidden = franchise.id !== state.activeFranchiseId;
+  });
+
+  const next = FRANCHISE_CATALOG[state.franchises.length];
+  const card = franchiseListEl.querySelector(".franchise-locked");
+  if (!next || !card) return;
+  const requirementParts = [`${fmt(next.cost)} 🪙`, `Reputación ${next.reputation}`];
+  if (next.helper) {
+    const helper = HELPERS.find((item) => item.id === next.helper);
+    requirementParts.push(`${helper.name} x${next.helperCount}`);
+  }
+  if (next.sales) requirementParts.push(`${next.sales} ventas de la cadena`);
+  card.querySelector("[data-requirements]").textContent = requirementParts.join(" · ");
+  card.querySelector("[data-open-franchise]").disabled = !franchiseRequirement(next);
+}
+
 function shopCard(html, cls) {
   const card = document.createElement("div");
   card.className = "shop-card" + (cls ? " " + cls : "");
@@ -1026,14 +1235,6 @@ function buildShopBar() {
     ${decoMaxed ? `<div class="owned">MAX</div>` : `<button id="buy-deco">${fmt(decoCost())} 🪙</button>`}`);
   if (!decoMaxed) decoCard.querySelector("#buy-deco").addEventListener("click", buyDeco);
 
-  // Franquicia
-  const gain = prestigeGain();
-  const prestigeCard = shopCard(`
-    <div class="big">🏪</div>
-    <div class="info"><div class="name">Franquicia ⭐ ${state.fidelity}</div>
-    <div class="desc">Reinicia: +10% ventas, +3% paciencia, +5% velocidad por punto</div></div>
-    <button id="buy-prestige" ${gain < 1 ? "disabled" : ""}>+${gain} ⭐</button>`, "prestige");
-  prestigeCard.querySelector("#buy-prestige").addEventListener("click", prestige);
 }
 
 function updateShopBar() {
@@ -1054,12 +1255,6 @@ function updateShopBar() {
   if (bj) bj.disabled = state.money < JUICER_COST;
   const bd = $("buy-deco");
   if (bd) bd.disabled = state.money < decoCost();
-  const bp = $("buy-prestige");
-  if (bp) {
-    const gain = prestigeGain();
-    bp.textContent = "+" + gain + " ⭐";
-    bp.disabled = gain < 1;
-  }
 }
 
 function buyFruit() {
@@ -1163,34 +1358,6 @@ function buyDeco() {
   checkAchievements(false);
 }
 
-function prestige() {
-  const gain = prestigeGain();
-  if (gain < 1) return;
-  if (!confirm(`¿Abrir franquicia?\n\nPierdes: monedas, frutas, carretilla, colas, personal, máquinas y día.\nGanas: ${gain} ⭐ de fidelidad.\n\nLos logros y estadísticas de siempre se conservan.`)) return;
-
-  const keep = {
-    achievements: state.achievements,
-    lifetimeEarned: state.lifetimeEarned,
-    totalSales: state.totalSales,
-    bestStreak: state.bestStreak,
-    angry: state.angry,
-    vipsServed: state.vipsServed,
-    rushesSeen: state.rushesSeen,
-    eventsSeen: state.eventsSeen,
-    muted: state.muted,
-    fidelity: state.fidelity + gain,
-    prestiges: state.prestiges + 1,
-    stats: state.stats,
-  };
-  state = Object.assign(defaultState(), keep);
-  custKey = null;
-  sfx("prestige");
-  rebuildAll();
-  save();
-  toast(`🏪 ¡Franquicia! +${gain} ⭐`);
-  checkAchievements(false);
-}
-
 /* ==================== Personal ==================== */
 
 function buildHelpers() {
@@ -1273,7 +1440,6 @@ function getBonifications() {
   const bonuses = [];
   if (state.cartLevel > 0) bonuses.push(`🛒 Carretilla: +${state.cartLevel * 10}% ventas`);
   if (state.decoLevel > 0) bonuses.push(`🪴 Decoración: +${state.decoLevel * 10}% paciencia`);
-  if (state.fidelity > 0) bonuses.push(`⭐ Fidelidad: +${state.fidelity * 10}% ventas`);
   if (state.blender) bonuses.push(`🥤 Licuadora: pedidos x2.5-3`);
   if (state.oven) bonuses.push(`🍰 Horno: pasteles x4`);
   if (state.juicer) bonuses.push(`🧃 Exprimidor: zumos x5`);
@@ -1290,8 +1456,9 @@ function buildStats() {
     { label: "Mejor racha", value: state.bestStreak },
     { label: "Clientes enfadados", value: state.angry },
     { label: "VIPs atendidos", value: state.vipsServed },
-    { label: "Días jugados", value: state.day },
-    { label: "Franquicias", value: state.prestiges },
+    { label: "Días de esta tienda", value: state.day },
+    { label: "Franquicias", value: state.franchises.length },
+    { label: "Reputación de esta tienda", value: Math.round(state.reputation) + "/100" },
   ];
 
   stats.forEach(s => {
@@ -1362,14 +1529,7 @@ function updateDynamic() {
     streakEl.hidden = true;
   }
 
-  if (state.fidelity > 0) {
-    fidelityEl.hidden = false;
-    fidelityNEl.textContent = state.fidelity;
-    fidelityPctEl.textContent = Math.round(FID_SALE * state.fidelity * 100);
-  } else {
-    fidelityEl.hidden = true;
-  }
-
+  updateFranchisePanel();
   updateCustomers();
   updateShopBar();
   updateHelpers();
@@ -1390,7 +1550,9 @@ function tick() {
     // Spawn de clientes
     if (!Number.isFinite(q.nextSpawnAt)) q.nextSpawnAt = now + 1500;
     if (now >= q.nextSpawnAt && q.customers.length < state.queueCapacity) {
-      q.customers.push(makeCustomer());
+      const customer = makeCustomer();
+      if (q.manual) customer.maxPatience *= MANUAL_PATIENCE;
+      q.customers.push(customer);
       customersChanged = true;
       q.nextSpawnAt = now + spawnDelay();
       if (q.customers.length === 1 && !document.hidden) sfx("bell");
@@ -1403,6 +1565,7 @@ function tick() {
       if (c.patience <= 0) {
         q.customers.splice(i, 1);
         state.angry++;
+        state.reputation = Math.max(0, state.reputation - 0.5);
         state.streak = 0;
         customersChanged = true;
         sfx("angry");
@@ -1426,6 +1589,10 @@ function tick() {
       const assignment = state.helperAssignments[helperKey];
 
       if (assignment) {
+        if (state.queues[assignment.queueIndex]?.manual) {
+          delete state.helperAssignments[helperKey];
+          continue;
+        }
         // Verificar si terminó de atender
         const elapsed = now - assignment.startedAt;
         const serviceTime = h.interval * 1000 / helperSpeedMult();
@@ -1456,6 +1623,7 @@ function tick() {
 
 function rebuildAll() {
   custKey = null;
+  buildFranchisePanel();
   buildBaskets();
   renderBag();
   buildCustomers(true);
@@ -1491,6 +1659,7 @@ muteEl.addEventListener("click", () => {
 resetEl.addEventListener("click", () => {
   if (!confirm("¿Borrar partida y empezar de cero?")) return;
   localStorage.removeItem(SAVE_KEY);
+  localStorage.removeItem(LEGACY_SAVE_KEY);
   state = defaultState();
   scheduleRush();
   scheduleEvent();
@@ -1525,6 +1694,7 @@ document.querySelectorAll("h2.collapsible").forEach((h) => {
     const collapsed = body.classList.toggle("collapsed");
     const arrow = h.querySelector(".arrow");
     if (arrow) arrow.textContent = collapsed ? "▶" : "▼";
+    h.setAttribute("aria-expanded", String(!collapsed));
   });
 });
 
